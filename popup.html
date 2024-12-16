@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Alchemy</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #0073b1;
+      --secondary-color: #005582;
+      --background-color: #f0f4f8;
+      --text-color: #2c3e50;
+      --accent-color: #2ecc71;
+    }
+
+    @keyframes popIn {
+      0% {
+        transform: scale(0.7) rotate(-5deg);
+        opacity: 0;
+      }
+      80% {
+        transform: scale(1.05) rotate(2deg);
+        opacity: 0.8;
+      }
+      100% {
+        transform: scale(1) rotate(0);
+        opacity: 1;
+      }
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #f0f4f8, #e6f2ff);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      width: 750px;
+      background-color: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+      animation: popIn 0.6s cubic-bezier(0.215, 0.610, 0.355, 1.000) forwards;
+      position: relative;
+      max-width: 90%;
+      margin: 20px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      color: var(--primary-color);
+      margin: 0;
+      font-size: 24px;
+    }
+
+    h2 i {
+      margin-right: 15px;
+      color: var(--accent-color);
+      font-size: 32px;
+    }
+
+    .content-wrapper {
+      display: flex;
+      gap: 30px;
+    }
+
+    .form-section {
+      flex: 1;
+    }
+
+    form {
+      margin: 0;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 15px;
+      margin: 12px 0;
+      box-sizing: border-box;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+
+    input:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(0, 115, 177, 0.1);
+    }
+
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      border: none;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      background-color: var(--secondary-color);
+      transform: translateY(-3px);
+      box-shadow: 0 7px 14px rgba(0, 0, 0, 0.1);
+    }
+
+    #toggleAutomation {
+      background-color: var(--accent-color);
+      margin-top: 20px;
+    }
+
+    #status {
+      text-align: center;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+      font-size: 16px;
+    }
+
+    .success {
+      color: var(--accent-color);
+      background-color: rgba(46, 204, 113, 0.1);
+    }
+
+    .error {
+      color: #e74c3c;
+      background-color: rgba(231, 76, 60, 0.1);
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        width: 95%;
+        padding: 20px;
+      }
+      .content-wrapper {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>
+        <i class="fas fa-robot"></i>
+        Job Alchemy
+      </h2>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="form-section">
+        <form id="automation-form">
+          <label for="email">Email:</label>
+          <input type="email" id="email" placeholder="Your LinkedIn Email" required>
+
+          <label for="url">Job Search URL:</label>
+          <input type="url" id="url" placeholder="LinkedIn Job Search URL" required>
+
+          <button type="submit">Configure Automation</button>
+        </form>
+      </div>
+      
+      <div class="form-section">
+        <button id="toggleAutomation">Start Automation</button>
+        <div id="status"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Previous JavaScript remains the same
+    document.addEventListener('DOMContentLoaded', () => {
+      const toggleButton = document.getElementById('toggleAutomation');
+      const statusDiv = document.getElementById('status');
+      const automationForm = document.getElementById('automation-form');
+      let isAutomating = false;
+
+      // Load saved state
+      chrome.storage.local.get('automationState', (data) => {
+        isAutomating = data.automationState || false;
+        updateButtonState();
+      });
+
+      // Handle toggle button click
+      toggleButton.addEventListener('click', () => {
+        isAutomating = !isAutomating;
+
+        // Save state
+        chrome.storage.local.set({ automationState: isAutomating });
+
+        // Send message to background script
+        chrome.runtime.sendMessage({ action: isAutomating ? 'startAutomation' : 'stopAutomation' }, (response) => {
+          if (response && response.success) {
+            statusDiv.textContent = isAutomating 
+              ? 'Automation is running...'
+              : 'Automation is stopped';
+            statusDiv.className = isAutomating ? 'success' : '';
+          } else {
+            statusDiv.textContent = 'Failed to update automation state';
+            statusDiv.className = 'error';
+          }
+        });
+
+        updateButtonState();
+      });
+
+      // Handle form submission
+      automationForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById('email').value;
+        const url = document.getElementById('url').value;
+
+        // Save email and URL to storage
+        chrome.storage.local.set({ email, url });
+
+        // Send message to start automation
+        chrome.runtime.sendMessage({ action: 'startAutomation', email, url }, (response) => {
+          if (response && response.success) {
+            statusDiv.textContent = `Automation started with email: ${email} and URL: ${url}`;
+            statusDiv.className = 'success';
+          } else {
+            statusDiv.textContent = 'Failed to start automation';
+            statusDiv.className = 'error';
+          }
+        });
+      });
+
+      function updateButtonState() {
+        toggleButton.textContent = isAutomating ? 'Stop Automation' : 'Start Automation';
+        statusDiv.textContent = isAutomating 
+          ? 'Automation is running...'
+          : 'Automation is stopped';
+        statusDiv.className = isAutomating ? 'success' : '';
+      }
+    });
+  </script>
+</body>
+</html>
